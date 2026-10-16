@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='utf-8'?>
+<toolbox monitor="true" tool_path="/galaxy/tools">
+  <section id="custom_s3_tools" name="S3 Dask Nástroje">
+    <tool file="/galaxy/tools/mytools/transform_s3.xml" />
+  </section>
+</toolbox>

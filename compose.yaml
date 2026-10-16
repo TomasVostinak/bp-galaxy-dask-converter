@@ -1,0 +1,47 @@
+services:
+  # 1. Samostatná PostgreSQL databáze
+  postgres:
+    image: postgres:15-alpine
+    container_name: galaxy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: galaxy
+      POSTGRES_USER: galaxy
+      POSTGRES_PASSWORD: galaxypassword
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - galaxy-net
+
+  # 2. Galaxy webová platforma
+  galaxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: galaxy-local
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    ports:
+      - "8080:80"
+    environment:
+      # Řekneme Galaxy, ať se připojí na náš postgres kontejner místo localhostu:
+      GALAXY_CONFIG_DATABASE_CONNECTION: "postgresql://galaxy:galaxypassword@postgres:5432/galaxy"
+      GALAXY_CONFIG_ADMIN_USERS: "admin@galaxy.org"
+      GALAXY_CONFIG_WATCH_TOOL_DATA_DIR: "true"
+    volumes:
+      - ./mytools:/galaxy/tools/mytools:ro
+      - ./local_tool_conf.xml:/export/galaxy/config/tool_conf.xml.local:ro
+      - galaxy-storage:/export
+    networks:
+      - galaxy-net
+
+networks:
+  galaxy-net:
+    driver: bridge
+
+volumes:
+  galaxy-storage:
+    name: galaxy-bp-storage
+  postgres-data:
+    name: galaxy-postgres-data
