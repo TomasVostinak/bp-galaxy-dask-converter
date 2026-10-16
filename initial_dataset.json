@@ -1,0 +1,4 @@
+{
+    "s3_endpoint": "https://s3.cl4.du.cesnet.cz",
+    "s3_path": "bp-galaxy/input.zarr"
+}
