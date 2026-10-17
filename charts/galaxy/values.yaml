@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/TomasVostinak/bp-galaxy-dask-converter
+  repository: ghcr.io/tomasvostinak/bp-galaxy-dask-converter
   tag: latest
   pullPolicy: Always
 
