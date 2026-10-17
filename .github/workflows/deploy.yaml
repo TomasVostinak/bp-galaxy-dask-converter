@@ -54,8 +54,10 @@ jobs:
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
           
-          # Helm použije lowercase image tag
+          export HELM_DRIVER=configmap
+          
           helm upgrade --install galaxy ./charts/galaxy \
             --namespace vostinak_ns \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
