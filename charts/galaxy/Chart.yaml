@@ -1,0 +1,5 @@
+apiVersion: v2
+name: galaxy-bp
+description: Galaxy instance pro bakalářskou práci
+version: 0.1.0
+appVersion: "23.1"
