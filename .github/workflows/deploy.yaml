@@ -57,6 +57,6 @@ jobs:
           
           # Helm použije lowercase image tag
           helm upgrade --install galaxy ./charts/galaxy \
-            --namespace vostinak_ns \
+            --namespace prijmeni_ns \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=latest
