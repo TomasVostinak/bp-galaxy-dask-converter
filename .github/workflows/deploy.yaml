@@ -54,11 +54,9 @@ jobs:
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-          
-          export HELM_DRIVER=configmap
+          chmod 700 ~/.kube/config
           
           helm upgrade --install galaxy ./charts/galaxy \
-            --namespace vostinak_ns \
+            --namespace vostinak-ns \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=latest
