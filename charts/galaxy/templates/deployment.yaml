@@ -15,6 +15,9 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
+        runAsUser: 1450
+        runAsGroup: 1450
+        fsGroup: 1450
         seccompProfile:
           type: RuntimeDefault
       containers:
