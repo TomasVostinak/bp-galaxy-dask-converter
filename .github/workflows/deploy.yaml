@@ -1,4 +1,4 @@
-name: Deploy Official Galaxy Helm
+name: Deploy galaxy-helm to CERIT-SC
 
 on:
   push:
@@ -25,10 +25,10 @@ jobs:
             --from-file=mytools/ \
             --dry-run=client -o yaml | kubectl apply -f -
 
-          helm repo add galaxy https://galaxyproject.github.io/galaxy-helm
+          helm repo add cloudve https://raw.githubusercontent.com/CloudVE/helm-charts/master/
           helm repo update
 
-          helm upgrade --install galaxy galaxy/galaxy \
+          helm upgrade --install galaxy cloudve/galaxy \
             --namespace vostinak-ns \
             --values galaxy-values.yaml \
             --timeout 10m

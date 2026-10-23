@@ -1,37 +1,57 @@
 ingress:
   enabled: true
-  className: "nginx"
+  ingressClassName: "nginx"
   hosts:
     - host: galaxy-vostinak.dyn.cloud.e-infra.cz
       paths:
         - path: /
           pathType: Prefix
 
-galaxy:
-  replicas: 1
+cvmfs:
+  enabled: false
+  cvmfscsi:
+    enabled: false
 
-  extraInitContainers: []
-  
-  configs:
-    tool_conf.xml: |
-      <?xml version='1.0' encoding='utf-8'?>
-      <toolbox monitor="true" tool_path="/galaxy/tools">
-        <section id="custom_s3_tools" name="S3 Dask Nástroje">
-          <tool file="/galaxy/tools/mytools/transform_s3.xml" />
-        </section>
-      </toolbox>
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
 
-  extraVolumeMounts:
-    - name: my-tools-vol
-      mountPath: /galaxy/tools/mytools
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
 
-  extraVolumes:
-    - name: my-tools-vol
-      configMap:
-        name: galaxy-my-tools
+extraVolumes:
+  - name: mytools-volume
+    configMap:
+      name: galaxy-my-tools
+
+extraVolumeMounts:
+  - name: mytools-volume
+    mountPath: /galaxy/tools/mytools
+
+configs:
+  tool_conf.xml: |
+    <?xml version='1.0' encoding='utf-8'?>
+    <toolbox monitor="true" tool_path="/galaxy/tools">
+      <section id="custom_s3_tools" name="S3 Dask Nástroje">
+        <tool file="/galaxy/tools/mytools/transform_s3.xml" />
+      </section>
+    </toolbox>
 
 postgresql:
   enabled: true
+  auth:
+    database: galaxy
+    username: galaxy
+    password: "galaxy_db_password_123"
   primary:
     podSecurityContext:
       enabled: true
@@ -46,6 +66,9 @@ postgresql:
 
 rabbitmq:
   enabled: true
+  auth:
+    username: galaxy
+    password: "galaxy_rmq_password_123"
   podSecurityContext:
     enabled: true
     fsGroup: 1001
