@@ -1,6 +1,7 @@
 FROM quay.io/bgruening/galaxy:latest
 
-RUN echo 'import sys; sys.exit(0)' > /usr/local/bin/check_database.py
+RUN printf '#!/usr/bin/env python3\nimport sys\nsys.exit(0)\n' > /usr/local/bin/check_database.py && \
+    chmod +x /usr/local/bin/check_database.py
 
 # doinstalování Python knihoven
 RUN /galaxy_venv/bin/pip install --no-cache-dir \
