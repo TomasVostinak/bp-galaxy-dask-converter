@@ -1,62 +1,34 @@
-name: Build and Deploy Galaxy
+name: Deploy Official Galaxy Helm
 
 on:
   push:
-    branches: [ main, master ]
-
-env:
-  REGISTRY: ghcr.io
+    branches: [ main ]
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set lowercase image name
-        run: |
-          echo "IMAGE_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
   deploy:
-    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set lowercase image name
-        run: |
-          echo "IMAGE_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Set up Helm
         uses: azure/setup-helm@v3
 
-      - name: Deploy to CERIT-SC Kuba Cluster
+      - name: Deploy to Kubernetes
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 700 ~/.kube/config
-          
-          helm upgrade --install galaxy ./charts/galaxy \
+
+          kubectl create configmap galaxy-my-tools \
             --namespace vostinak-ns \
-            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
-            --set image.tag=latest
+            --from-file=mytools/ \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          helm repo add galaxy https://galaxyproject.github.io/galaxy-helm
+          helm repo update
+
+          helm upgrade --install galaxy galaxy/galaxy \
+            --namespace vostinak-ns \
+            --values galaxy-values.yaml \
+            --timeout 10m
