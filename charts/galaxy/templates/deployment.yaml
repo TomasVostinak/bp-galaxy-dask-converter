@@ -35,6 +35,6 @@ spec:
             - name: GALAXY_CONFIG_ENABLE_CELERY_TASKS
               value: "false"
           ports:
-            - containerPort: 8080
+            - containerPort: 80
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
