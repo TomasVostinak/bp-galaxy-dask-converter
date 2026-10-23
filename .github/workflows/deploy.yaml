@@ -1,34 +1,62 @@
-name: Deploy galaxy-helm to CERIT-SC
+name: Build and Deploy Galaxy
 
 on:
   push:
     branches: [ main ]
 
+env:
+  REGISTRY: ghcr.io
+
 jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set lowercase image name
+        run: |
+          echo "IMAGE_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
   deploy:
+    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set lowercase image name
+        run: |
+          echo "IMAGE_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Set up Helm
         uses: azure/setup-helm@v3
 
-      - name: Deploy to Kubernetes
+      - name: Deploy to CERIT-SC Kuba Cluster
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 700 ~/.kube/config
-
-          kubectl create configmap galaxy-my-tools \
+          
+          helm upgrade --install galaxy ./charts/galaxy \
             --namespace vostinak-ns \
-            --from-file=mytools/ \
-            --dry-run=client -o yaml | kubectl apply -f -
-
-          helm repo add cloudve https://raw.githubusercontent.com/CloudVE/helm-charts/master/
-          helm repo update
-
-          helm upgrade --install galaxy cloudve/galaxy \
-            --namespace vostinak-ns \
-            --values galaxy-values.yaml \
-            --timeout 10m
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=latest
