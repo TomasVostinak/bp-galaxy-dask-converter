@@ -31,9 +31,11 @@ spec:
                 - ALL
           env:
             - name: NONUSE
-              value: "rabbitmq,reports,proftpd,nodejs"
+              value: "rabbitmq,reports,proftpd,nodejs,postgres"
             - name: GALAXY_CONFIG_ENABLE_CELERY_TASKS
               value: "false"
+            - name: GALAXY_CONFIG_DATABASE_CONNECTION
+              value: "sqlite:////tmp/universe.sqlite?isolation_level=IMMEDIATE"
           ports:
             - containerPort: 80
           resources:
