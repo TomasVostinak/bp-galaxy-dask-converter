@@ -31,7 +31,7 @@ spec:
                 - ALL
           env:
             - name: NONUSE
-              value: "rabbitmq,reports,proftpd,nodejs,postgres,slurmd,slurmctld"
+              value: "rabbitmq,reports,proftpd,nodejs,postgres"
             - name: GALAXY_CONFIG_ENABLE_CELERY_TASKS
               value: "false"
             - name: GALAXY_CONFIG_DATABASE_CONNECTION
