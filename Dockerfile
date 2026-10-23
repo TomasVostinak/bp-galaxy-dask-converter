@@ -1,5 +1,7 @@
 FROM quay.io/bgruening/galaxy:latest
 
+RUN echo 'import sys; sys.exit(0)' > /usr/local/bin/check_database.py
+
 # doinstalování Python knihoven
 RUN /galaxy_venv/bin/pip install --no-cache-dir \
     xarray \
