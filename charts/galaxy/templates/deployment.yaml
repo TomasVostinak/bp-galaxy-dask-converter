@@ -1,44 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}
-  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.app.name }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.app.name }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.deployment.replicaCount }}
+  strategy:
+    type: RollingUpdate
   selector:
     matchLabels:
-      app: {{ .Release.Name }}
+      app.kubernetes.io/name: {{ .Values.app.name }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}
+        app.kubernetes.io/name: {{ .Values.app.name }}
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1450
-        runAsGroup: 1450
-        fsGroup: 1450
-        seccompProfile:
-          type: RuntimeDefault
       containers:
-        - name: galaxy
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        - name: {{ .Values.app.name }}
+          image: "{{ .Values.registry.host }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-          env:
-            - name: NONUSE
-              value: "rabbitmq,reports,proftpd,nodejs,postgres"
-            - name: GALAXY_CONFIG_ENABLE_CELERY_TASKS
-              value: "false"
-            - name: GALAXY_CONFIG_DATABASE_CONNECTION
-              value: "sqlite:////tmp/universe.sqlite?isolation_level=IMMEDIATE"
-            - name: GALAXY_CONFIG_DATABASE_AUTO_MIGRATE
-              value: "true"
           ports:
-            - containerPort: 80
+            - name: {{ .Values.service.internalPort.name | quote }}
+              containerPort: {{ .Values.service.internalPort.number | int }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

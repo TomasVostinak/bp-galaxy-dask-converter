@@ -1,13 +1,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}
-  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.app.name }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.app.name }}
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: 80
-      name: http
+    - port: {{ .Values.service.externalPort.number | int }}
+      targetPort: {{ .Values.service.internalPort.number | int }}
+      protocol: TCP
+      name: {{ .Values.service.externalPort.name | quote }}
   selector:
-    app: {{ .Release.Name }}
+    app.kubernetes.io/name: {{ .Values.app.name }}

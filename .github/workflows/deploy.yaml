@@ -55,8 +55,8 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 700 ~/.kube/config
-          
+
           helm upgrade --install galaxy ./charts/galaxy \
-            --namespace vostinak-ns \
+            --namespace galaxy-strata-ai \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=latest
