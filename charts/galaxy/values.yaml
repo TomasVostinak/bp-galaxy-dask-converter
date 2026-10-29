@@ -34,4 +34,4 @@ resources:
     memory: "12Gi"
   limits:
     cpu: "8"
-    memory: "16Gi"y
+    memory: "16Gi"
