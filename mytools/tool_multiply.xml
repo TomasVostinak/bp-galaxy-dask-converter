@@ -1,7 +1,7 @@
-<tool id="trans3" name="transform_s3" version="1.0.0">
-    <description>Galaxy tool pro transformování dat z S3 a jejich zápis do S3</description>
+<tool id="s3_multiply" name="S3 Multiply" version="1.0.0">
+    <description>Multiplication by factor on data from S3</description>
     <command detect_errors="exit_code"><![CDATA[
-    python3 '$__tool_directory__/transform_s3.py'
+    python3 '$__tool_directory__/operations.py' multiply
         --endpoint '$endpoint'
         --public-key '$public_key'
         --private-key '$private_key'
@@ -13,8 +13,8 @@
         <param name="endpoint" type="text" value="https://s3.cl4.du.cesnet.cz" label="S3 endpoint" help="S3 endpoint URL"/>
         <param name="public_key" type="text" label="Public Key" help="S3 public key"/>
         <param name="private_key" type="text" label="Private Key" help="S3 private key"/>
-        <param name="input_json" type="data" format="json" label="Input JSON" help="Input JSON file"/>
-        <param name="factor" type="float" label="Factor" help="Transformation factor"/>
+        <param name="input_json" type="data" format="json" label="Input JSON" help="Input JSON file with S3 path to dataset"/>
+        <param name="factor" type="float" value="2.0" label="Factor" help="Transformation factor"/>
     </inputs>
     <outputs>
         <data name="output_json" format="json" label="Output JSON" help="Output JSON file"/>
