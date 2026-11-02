@@ -1,51 +1,87 @@
-app:
-  name: galaxy
-
-registry:
-  host: ghcr.io
-
 image:
-  name: tomasvostinak/bp-galaxy-dask-converter
-  tag: latest
-  pullPolicy: Always
+  repository: ghcr.io/tomasvostinak/bp-galaxy-dask-converter
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
 
-deployment:
-  replicaCount: 1
+postgresql:
+  enabled: true
+  existingDatabase: "galaxy-postgres:5432"
+  galaxyDatabaseUser: galaxy             # musí odpovídat klíči username v secretu galaxy-postgres-auth
+  galaxyExistingSecret: galaxy-postgres-auth
+  galaxyExistingSecretKeyRef: password
+  galaxyConnectionParams: ""
 
-podSecurityContext:
-  runAsNonRoot: true
-  seccompProfile:
-    type: RuntimeDefault
+rabbitmq:
+  enabled: true
+  existingCluster: galaxy-rabbitmq
+  existingSecret: galaxy-rabbitmq-auth
+  protocol: amqp
+  port: 5672
+
+cvmfs:
+  deploy: false
+  enabled: false
+refdata:
+  enabled: false
+s3csi:
+  deploy: false
+
+jobs:
+  priorityClass:
+    enabled: false
+
+persistence:
+  enabled: true
+  storageClass: nfs-csi
+  size: 50Gi
 
 securityContext:
-  allowPrivilegeEscalation: false
-  capabilities:
-    drop:
-      - ALL
-  runAsNonRoot: true
-  runAsUser: 1450
-  runAsGroup: 1450
-
-service:
-  type: ClusterIP
-  externalPort:
-    number: 80
-    name: http
-  internalPort:
-    number: 80
-    name: http
+  fsGroup: 10001
+setupJob:
+  securityContext:
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+  createDatabase: true
 
 ingress:
-  className: "nginx"
+  enabled: true
+  ingressClassName: nginx
   annotations:
     kubernetes.io/tls-acme: "true"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
-  host: "galaxy-strata-ai.dyn.cloud.e-infra.cz"
+  path: /
+  hosts:
+    - host: galaxy-strata-ai.dyn.cloud.e-infra.cz
+      paths:
+        - path: /
+  tls:
+    - hosts:
+        - galaxy-strata-ai.dyn.cloud.e-infra.cz
+      secretName: galaxy-tls
 
 resources:
   requests:
-    cpu: "3"
-    memory: "7500Mi"
+    cpu: "1"
+    memory: 4Gi
   limits:
-    cpu: "3250m"
-    memory: "15000Mi"
+    cpu: "3"
+    memory: 12Gi
+
+configs:
+  galaxy.yml:
+    galaxy:
+      admin_users: "admin@galaxy.org"
+      # [OVĚŘIT] pokud chart neřeší externí broker jinak:
+      # amqp_internal_connection: "amqp://USER:HESLO@galaxy-rabbitmq:5672/galaxy"
+      # Vlastní nástroje z mytools - viz Dockerfile a local_tool_conf.xml.
+      # POZOR: přepsáním tool_config_file přijdeš o výchozí nástroje chartu.
+      # tool_config_file: "/galaxy/server/config/tool_conf.xml,/galaxy/server/config/local_tool_conf.xml"
+
+cronJobs:
+  maintenance:
+    securityContext:
+      runAsUser: 10001
+  tmpdir:
+    securityContext:
+      runAsUser: 10001
