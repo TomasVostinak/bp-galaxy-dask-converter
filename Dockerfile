@@ -1,4 +1,4 @@
-FROM quay.io/galaxyproject/galaxy-min:24.2
+FROM quay.io/galaxyproject/galaxy-min:26.1.1
 
 USER root
 
