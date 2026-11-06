@@ -53,6 +53,9 @@ jobs:
           kubectl apply -n "$NAMESPACE" -f charts/postgresql/ -f charts/rabbitmq/
           kubectl rollout status statefulset/galaxy-postgres -n "$NAMESPACE" --timeout=300s
           kubectl rollout status statefulset/galaxy-rabbitmq -n "$NAMESPACE" --timeout=300s
+          # Galaxy se připojuje na vhost "/"; u dříve inicializovaného brokeru nemusí existovat
+          kubectl exec -n "$NAMESPACE" galaxy-rabbitmq-0 -- rabbitmqctl add_vhost / || true
+          kubectl exec -n "$NAMESPACE" galaxy-rabbitmq-0 -- rabbitmqctl set_permissions -p / galaxy ".*" ".*" ".*"
 
       - name: Galaxy
         run: |
