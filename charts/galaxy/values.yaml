@@ -68,51 +68,26 @@ webHandlers:
   resources:
     requests: {cpu: 250m, memory: 1500Mi}
     limits: {memory: 3Gi}
-  podSpecExtra:
-    securityContext:
-      runAsNonRoot: true
-      seccompProfile:
-        type: RuntimeDefault
 
 jobHandlers:
   resources:
     requests: {cpu: 250m, memory: 750Mi}
     limits: {memory: 2Gi}
-  podSpecExtra:
-    securityContext:
-      runAsNonRoot: true
-      seccompProfile:
-        type: RuntimeDefault
 
 workflowHandlers:
   resources:
     requests: {cpu: 100m, memory: 500Mi}
     limits: {memory: 1536Mi}
-  podSpecExtra:
-    securityContext:
-      runAsNonRoot: true
-      seccompProfile:
-        type: RuntimeDefault
 
 celery:
   resources:
     requests: {cpu: 100m, memory: 400Mi}
     limits: {memory: 1Gi}
-  podSpecExtra:
-    securityContext:
-      runAsNonRoot: true
-      seccompProfile:
-        type: RuntimeDefault
 
 celeryBeat:
   resources:
     requests: {cpu: 50m, memory: 250Mi}
     limits: {memory: 512Mi}
-  podSpecExtra:
-    securityContext:
-      runAsNonRoot: true
-      seccompProfile:
-        type: RuntimeDefault
 
 nginx:
   resources:
@@ -124,11 +99,6 @@ tusd:
   resources:
     requests: {cpu: 50m, memory: 128Mi}
     limits: {memory: 512Mi}
-  podSpecExtra:
-    securityContext:
-      runAsNonRoot: true
-      seccompProfile:
-        type: RuntimeDefault
   ingress:
     enabled: true
     ingressClassName: nginx
