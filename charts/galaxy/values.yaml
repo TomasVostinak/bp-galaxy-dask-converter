@@ -45,6 +45,8 @@ setupJob:
     runAsGroup: 10001
     fsGroup: 10001
   createDatabase: true
+  downloadToolConfs:
+    enabled: false
 
 ingress:
   enabled: true
