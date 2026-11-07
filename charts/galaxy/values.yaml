@@ -114,6 +114,12 @@ tusd:
         secretName: galaxy-tls
 
 configs:
+  job_conf.yml:
+    execution:
+      default: local
+      environments:
+        local:
+          runner: local
   galaxy.yml:
     galaxy:
       admin_users: "admin@galaxy.org"

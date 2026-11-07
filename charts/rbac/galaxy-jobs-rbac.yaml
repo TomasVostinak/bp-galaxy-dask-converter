@@ -4,11 +4,14 @@ metadata:
   name: galaxy-jobs-runner
 rules:
   - apiGroups: ["batch"]
-    resources: ["jobs", "jobs/status"]
+    resources: ["jobs"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: [""]
-    resources: ["pods", "pods/log"]
+    resources: ["pods"]
     verbs: ["get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
