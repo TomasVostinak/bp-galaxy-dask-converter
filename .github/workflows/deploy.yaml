@@ -63,6 +63,7 @@ jobs:
           helm upgrade --install galaxy cloudve/galaxy -n "$NAMESPACE" \
             -f charts/galaxy/values.yaml \
             --set image.repository="$IMAGE" --set image.tag="$TAG" \
+            --set-file 'configs.local_tool_conf\.xml=local_tool_conf.xml' \
             --post-renderer python3 --post-renderer-args charts/galaxy/post-render.py \
             --wait --timeout 20m
 

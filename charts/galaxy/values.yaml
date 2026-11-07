@@ -117,6 +117,7 @@ configs:
   galaxy.yml:
     galaxy:
       admin_users: "admin@galaxy.org"
+      tool_config_file: "/galaxy/server/config/tool_conf.xml,/galaxy/server/config/local_tool_conf.xml"
 
 cronJobs:
   maintenance:

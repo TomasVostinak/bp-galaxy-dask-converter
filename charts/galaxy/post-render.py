@@ -77,6 +77,9 @@ def main():
         ps = pod_spec(d)
         if ps is not None:
             fix_pod(ps, d.get("kind") in ("Job", "CronJob"))
+        if d.get("kind") == "Deployment":
+            # kvóta namespace je těsná: starý pod se musí zastavit dřív, než vznikne nový
+            d["spec"]["strategy"] = {"type": "Recreate"}
     yaml.safe_dump_all(docs, sys.stdout, sort_keys=False, default_flow_style=False, width=1000000)
 
 if __name__ == "__main__":
