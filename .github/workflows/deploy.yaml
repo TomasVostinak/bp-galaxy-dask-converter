@@ -66,6 +66,18 @@ jobs:
             --post-renderer python3 --post-renderer-args charts/galaxy/post-render.py \
             --wait --timeout 20m
 
+      - name: Nástroje z mytools na sdílený disk
+        run: |
+          WEB="$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/component=galaxy-web-handler \
+                 --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')"
+          echo "Nahrávám mytools do podu $WEB"
+          tar cf - mytools | kubectl exec -i -n "$NAMESPACE" "$WEB" -c galaxy-web -- \
+            tar xf - -C /galaxy/server/database/tools
+          kubectl exec -n "$NAMESPACE" "$WEB" -c galaxy-web -- ls /galaxy/server/database/tools/mytools
+          # Galaxy načte nástroje při startu
+          kubectl rollout restart deployment/galaxy-web deployment/galaxy-job-0 deployment/galaxy-workflow -n "$NAMESPACE"
+          kubectl rollout status deployment/galaxy-web -n "$NAMESPACE" --timeout=600s
+
       - name: Úklid
         if: always()
         run: rm -f "${KUBECONFIG}"

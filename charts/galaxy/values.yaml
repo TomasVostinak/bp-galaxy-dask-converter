@@ -117,11 +117,6 @@ configs:
   galaxy.yml:
     galaxy:
       admin_users: "admin@galaxy.org"
-      # [OVĚŘIT] pokud chart neřeší externí broker jinak:
-      # amqp_internal_connection: "amqp://USER:HESLO@galaxy-rabbitmq:5672/galaxy"
-      # Vlastní nástroje z mytools - viz Dockerfile a local_tool_conf.xml.
-      # POZOR: přepsáním tool_config_file přijdeš o výchozí nástroje chartu.
-      # tool_config_file: "/galaxy/server/config/tool_conf.xml,/galaxy/server/config/local_tool_conf.xml"
 
 cronJobs:
   maintenance:
