@@ -11,7 +11,7 @@ def get_s3_store(endpoint, public, secret):
     return fs
 
 def galaxy_s3_tool(func):
-    @functools.wrap(func)
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         sig = inspect.signature(func)
         params = list(sig.parameters.values())
