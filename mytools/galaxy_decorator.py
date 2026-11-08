@@ -14,8 +14,11 @@ def galaxy_s3_tool(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         sig = inspect.signature(func)
-        params = list(sig.parameters.values())
-        custom_params = params[:1]
+        
+        custom_params = [
+            param for param in sig.parameters.values() 
+            if param.name != "ds"
+        ]
 
         parser = argparse.ArgumentParser(description=f"Galaxy wrapper for {func.__name__}")
         parser.add_argument("--endpoint", required=True, help="S3 Endpoint URL")
@@ -25,7 +28,7 @@ def galaxy_s3_tool(func):
         parser.add_argument("--output-json", required=True, help="Output JSON with Zarr dataset")
 
         for param in custom_params:
-            arg_name = f"--{param.name.replace("_", "-")}"
+            arg_name = f"--{param.name.replace('_', '-')}"
             arg_type = param.annotation if param.annotation != inspect.Parameter.empty else str
 
             if param.default != inspect.Parameter.empty:
