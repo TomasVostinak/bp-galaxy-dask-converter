@@ -8,7 +8,7 @@ def register_operation(func):
     OPERATIONS[func.__name__] = galaxy_s3_tool(func)
     return func
 
-@galaxy_s3_tool
+@register_operation
 def multiply(ds: xr.Dataset, factor: float = 2.0) -> xr.Dataset:
     return ds * factor
 
