@@ -1,23 +1,148 @@
-replicaCount: 1
-
 image:
   repository: ghcr.io/tomasvostinak/bp-galaxy-dask-converter
-  tag: latest
-  pullPolicy: Always
+  tag: "sha-396cc3b"
+  pullPolicy: IfNotPresent
 
-service:
-  type: ClusterIP
-  port: 80
+postgresql:
+  enabled: true
+  existingDatabase: "galaxy-postgres:5432"
+  galaxyDatabaseUser: galaxy             # musí odpovídat klíči username v secretu galaxy-postgres-auth
+  galaxyExistingSecret: galaxy-postgres-auth
+  galaxyExistingSecretKeyRef: password
+  galaxyConnectionParams: ""
+
+rabbitmq:
+  enabled: true
+  existingCluster: galaxy-rabbitmq
+  existingSecret: galaxy-rabbitmq-auth
+  protocol: amqp
+  port: 5672
+
+cvmfs:
+  deploy: false
+  enabled: false
+refdata:
+  enabled: false
+s3csi:
+  deploy: false
+
+jobs:
+  priorityClass:
+    enabled: false
+
+persistence:
+  enabled: true
+  storageClass: nfs-csi
+  size: 50Gi
+
+securityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+setupJob:
+  securityContext:
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+  createDatabase: true
+  downloadToolConfs:
+    enabled: false
 
 ingress:
   enabled: true
-  className: nginx
-  host: galaxy-vostinak.dyn.cloud.e-infra.cz
+  ingressClassName: nginx
+  canary:
+    enabled: false
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  path: /
+  hosts:
+    - host: galaxy-strata-ai.dyn.cloud.e-infra.cz
+      paths:
+        - path: /
+  tls:
+    - hosts:
+        - galaxy-strata-ai.dyn.cloud.e-infra.cz
+      secretName: galaxy-tls
 
-resources:
-  requests:
-    cpu: "2"
-    memory: "4Gi"
-  limits:
-    cpu: "4"
-    memory: "8Gi"
+webHandlers:
+  resources:
+    requests: {cpu: 250m, memory: 1500Mi}
+    limits: {memory: 3Gi}
+
+jobHandlers:
+  resources:
+    requests: {cpu: 250m, memory: 750Mi}
+    limits: {memory: 2Gi}
+
+workflowHandlers:
+  resources:
+    requests: {cpu: 100m, memory: 500Mi}
+    limits: {memory: 1536Mi}
+
+celery:
+  resources:
+    requests: {cpu: 100m, memory: 400Mi}
+    limits: {memory: 1Gi}
+
+celeryBeat:
+  resources:
+    requests: {cpu: 50m, memory: 250Mi}
+    limits: {memory: 512Mi}
+
+nginx:
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 512Mi}
+
+tusd:
+  enabled: true
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 512Mi}
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - host: galaxy-strata-ai.dyn.cloud.e-infra.cz
+        paths:
+          - path: '{{ include "galaxy.add_trailing_slash" .Values.ingress.path }}api/upload/resumable_upload'
+    tls:
+      - hosts:
+          - galaxy-strata-ai.dyn.cloud.e-infra.cz
+        secretName: galaxy-tls
+
+configs:
+  job_conf.yml:
+    execution:
+      default: local
+      environments:
+        local:
+          runner: local
+  galaxy.yml:
+    galaxy:
+      admin_users: "admin@galaxy.org"
+      tool_config_file: "/galaxy/server/config/tool_conf.xml,/galaxy/server/config/local_tool_conf.xml"
+
+cronJobs:
+  maintenance:
+    enabled: true
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 10001
+      runAsGroup: 10001
+      seccompProfile:
+        type: RuntimeDefault
+
+  tmpdir:
+    enabled: true
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 10001
+      runAsGroup: 10001
+      seccompProfile:
+        type: RuntimeDefault
+
+rbac:
+  enabled: false

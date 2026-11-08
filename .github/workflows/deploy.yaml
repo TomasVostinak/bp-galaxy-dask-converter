@@ -1,62 +1,84 @@
-name: Build and Deploy Galaxy
+name: Deploy Galaxy
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
 
 env:
-  REGISTRY: ghcr.io
+  NAMESPACE: ${{ vars.K8S_NAMESPACE }}
+  KUBECONFIG: ${{ github.workspace }}/kube-config.yaml
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set lowercase image name
-        run: |
-          echo "IMAGE_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
   deploy:
-    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
+      - run: pip install --quiet pyyaml
 
-      - name: Set lowercase image name
+      - name: Kubeconfig ze secretu
         run: |
-          echo "IMAGE_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          umask 077
+          printf '%s' "${KUBE_CONFIG_B64}" | base64 -d > "${KUBECONFIG}"
+        env:
+          KUBE_CONFIG_B64: ${{ secrets.KUBECONFIG }}
 
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
-
-      - name: Deploy to CERIT-SC Kuba Cluster
+      - name: Build a push image
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
-          chmod 700 ~/.kube/config
-          
-          helm upgrade --install galaxy ./charts/galaxy \
-            --namespace vostinak-ns \
-            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
-            --set image.tag=latest
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/bp-galaxy-dask-converter"
+          echo "IMAGE=${IMAGE}" >> "$GITHUB_ENV"
+          echo "TAG=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker build -t "${IMAGE}:sha-${GITHUB_SHA::7}" .
+          docker push "${IMAGE}:sha-${GITHUB_SHA::7}"
+
+      - name: Secrety
+        run: |
+          for name in galaxy-postgres-auth galaxy-rabbitmq-auth; do
+            kubectl get secret "$name" -n "$NAMESPACE" >/dev/null 2>&1 || \
+              kubectl create secret generic "$name" -n "$NAMESPACE" \
+                --from-literal=username=galaxy --from-literal=password="$(openssl rand -hex 24)"
+          done
+
+      - name: Postgres a RabbitMQ
+        run: |
+          kubectl apply -n "$NAMESPACE" -f charts/rbac/ -f charts/postgresql/ -f charts/rabbitmq/
+          kubectl rollout status statefulset/galaxy-postgres -n "$NAMESPACE" --timeout=300s
+          kubectl rollout status statefulset/galaxy-rabbitmq -n "$NAMESPACE" --timeout=300s
+          # Galaxy se připojuje na vhost "/"; u dříve inicializovaného brokeru nemusí existovat
+          kubectl exec -n "$NAMESPACE" galaxy-rabbitmq-0 -- rabbitmqctl add_vhost / || true
+          kubectl exec -n "$NAMESPACE" galaxy-rabbitmq-0 -- rabbitmqctl set_permissions -p / galaxy ".*" ".*" ".*"
+
+      - name: Galaxy
+        run: |
+          helm repo add cloudve https://raw.githubusercontent.com/CloudVE/helm-charts/master/
+          helm upgrade --install galaxy cloudve/galaxy -n "$NAMESPACE" \
+            -f charts/galaxy/values.yaml \
+            --set image.repository="$IMAGE" --set image.tag="$TAG" \
+            --set-file 'configs.local_tool_conf\.xml=local_tool_conf.xml' \
+            --post-renderer python3 --post-renderer-args charts/galaxy/post-render.py \
+            --wait --timeout 20m
+
+      - name: Nástroje z mytools na sdílený disk
+        run: |
+          WEB="$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/component=galaxy-web-handler \
+                 --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')"
+          echo "Nahrávám mytools do podu $WEB"
+          tar cf - mytools | kubectl exec -i -n "$NAMESPACE" "$WEB" -c galaxy-web -- \
+            tar xf - -C /galaxy/server/database/tools
+          kubectl exec -n "$NAMESPACE" "$WEB" -c galaxy-web -- ls /galaxy/server/database/tools/mytools
+          # Galaxy načte nástroje při startu
+          kubectl rollout restart deployment/galaxy-web deployment/galaxy-job-0 deployment/galaxy-workflow -n "$NAMESPACE"
+          kubectl rollout status deployment/galaxy-web -n "$NAMESPACE" --timeout=600s
+
+      - name: Úklid
+        if: always()
+        run: rm -f "${KUBECONFIG}"

@@ -1,0 +1,97 @@
+# RabbitMQ pro Galaxy (Celery) - bez operátoru, jedna replika.
+# Secret `galaxy-rabbitmq-auth` vytvoř ručně (viz deploy/README.md).
+apiVersion: v1
+kind: Service
+metadata:
+  name: galaxy-rabbitmq
+  labels:
+    app: galaxy-rabbitmq
+spec:
+  selector:
+    app: galaxy-rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: galaxy-rabbitmq
+  labels:
+    app: galaxy-rabbitmq
+spec:
+  serviceName: galaxy-rabbitmq
+  replicas: 1
+  selector:
+    matchLabels:
+      app: galaxy-rabbitmq
+  template:
+    metadata:
+      labels:
+        app: galaxy-rabbitmq
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999       # uživatel "rabbitmq" v oficiálním image
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:3.13-management
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: amqp
+              containerPort: 5672
+            - name: management
+              containerPort: 15672
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: galaxy-rabbitmq-auth
+                  key: username
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: galaxy-rabbitmq-auth
+                  key: password
+            - name: RABBITMQ_DEFAULT_VHOST
+              value: galaxy
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "-q", "ping"]
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "-q", "ping"]
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/rabbitmq
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: csi-ceph-rbd-du
+        resources:
+          requests:
+            storage: 2Gi

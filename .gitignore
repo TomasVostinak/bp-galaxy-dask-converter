@@ -1,2 +1,4 @@
 *.zarr
 .venv
+kuba-cluster.yaml
+vendor
