@@ -2,3 +2,4 @@
 .venv
 kuba-cluster.yaml
 vendor
+initial_dataset.json

@@ -3,9 +3,9 @@ name: Deploy Galaxy Infrastructure
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - 'mytools/**'
-      - 'local_tool_conf.xml'
+    paths:
+      - 'charts/**'
+      - '.github/workflows/deploy-galaxy.yaml'
   workflow_dispatch:
 
 permissions:
@@ -15,6 +15,10 @@ permissions:
 env:
   NAMESPACE: ${{ vars.K8S_NAMESPACE }}
   KUBECONFIG: ${{ github.workspace }}/kube-config.yaml
+
+concurrency:
+  group: k8s-galaxy-cluster
+  cancel-in-progress: false
 
 jobs:
   deploy-galaxy:

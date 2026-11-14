@@ -6,6 +6,7 @@ on:
     paths:
       - 'mytools/**'
       - 'local_tool_conf.xml'
+      - '.github/workflows/update-tools.yaml'
   workflow_dispatch:
 
 permissions:
@@ -14,6 +15,10 @@ permissions:
 env:
   NAMESPACE: ${{ vars.K8S_NAMESPACE }}
   KUBECONFIG: ${{ github.workspace }}/kube-config.yaml
+
+concurrency:
+  group: k8s-galaxy-cluster
+  cancel-in-progress: false
 
 jobs:
   sync-tools:
@@ -49,6 +54,9 @@ jobs:
 
           tar cf - mytools | kubectl exec -i -n "$NAMESPACE" "$WEB" -c galaxy-web -- \
             tar xf - -C /galaxy/server/database/tools
+
+          echo "Stav složky nástrojů v podu:"
+          kubectl exec -n "$NAMESPACE" "$WEB" -c galaxy-web -- ls -la /galaxy/server/database/tools/mytools
 
       - name: Restart Galaxy processes for XML reload
         run: |
