@@ -7,6 +7,10 @@ on:
       - 'mytools/**'
       - 'local_tool_conf.xml'
       - '.github/workflows/update-tools.yaml'
+  workflow_run:
+    workflows: ["Deploy Galaxy Infrastructure"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -23,6 +27,7 @@ concurrency:
 jobs:
   sync-tools:
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-kubectl@v4
@@ -55,7 +60,7 @@ jobs:
           tar cf - mytools | kubectl exec -i -n "$NAMESPACE" "$WEB" -c galaxy-web -- \
             tar xf - -C /galaxy/server/database/tools
 
-          echo "Stav složky nástrojů v podu:"
+          echo "State of directory for tools:"
           kubectl exec -n "$NAMESPACE" "$WEB" -c galaxy-web -- ls -la /galaxy/server/database/tools/mytools
 
       - name: Restart Galaxy processes for XML reload
