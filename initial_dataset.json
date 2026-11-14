@@ -1,4 +1,8 @@
 {
-    "s3_endpoint": "https://s3.cl4.du.cesnet.cz",
-    "s3_path": "bp-galaxy/input.zarr"
+  "s3": {
+    "endpoint_url": "https://s3.cl4.du.cesnet.cz",
+    "access_key": "XXXXXXXXXXXXXXXXXXXXX",
+    "secret_key": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  },
+  "s3_path": "bp-galaxy/input.zarr"
 }

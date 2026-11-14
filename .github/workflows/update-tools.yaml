@@ -1,0 +1,62 @@
+name: Update S3 Dask Tools
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mytools/**'
+      - 'local_tool_conf.xml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NAMESPACE: ${{ vars.K8S_NAMESPACE }}
+  KUBECONFIG: ${{ github.workspace }}/kube-config.yaml
+
+jobs:
+  sync-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+
+      - name: Kubeconfig from secrets
+        run: |
+          umask 077
+          printf '%s' "${KUBE_CONFIG_B64}" | base64 -d > "${KUBECONFIG}"
+        env:
+          KUBE_CONFIG_B64: ${{ secrets.KUBECONFIG }}
+
+      - name: Update local_tool_conf.xml
+        run: |
+          if kubectl get configmap galaxy-local-tools -n "$NAMESPACE" >/dev/null 2>&1; then
+            kubectl create configmap galaxy-local-tools -n "$NAMESPACE" \
+              --from-file=local_tool_conf.xml=local_tool_conf.xml \
+              --dry-run=client -o yaml | kubectl apply -f -
+          fi
+
+      - name: Copy mytools to shared volume
+        run: |
+          WEB="$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/component=galaxy-web-handler \
+                 --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')"
+          
+          if [ -z "$WEB" ]; then
+            echo "Error: Pod galaxy-web couldn't be found or is not running."
+            exit 1
+          fi
+
+          tar cf - mytools | kubectl exec -i -n "$NAMESPACE" "$WEB" -c galaxy-web -- \
+            tar xf - -C /galaxy/server/database/tools
+
+      - name: Restart Galaxy processes for XML reload
+        run: |
+          echo "Restarting Galaxy deployments for reload XML definitions..."
+          kubectl rollout restart deployment/galaxy-web deployment/galaxy-job-0 deployment/galaxy-workflow -n "$NAMESPACE"
+          kubectl rollout status deployment/galaxy-web -n "$NAMESPACE" --timeout=300s
+          echo "Tools have been successfully updated and loaded."
+
+      - name: Cleanup Kubeconfig
+        if: always()
+        run: rm -f "${KUBECONFIG}"
