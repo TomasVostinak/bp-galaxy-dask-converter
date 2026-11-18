@@ -1,22 +1,15 @@
+from typing import List
 import xarray as xr
-import sys
-from galaxy_decorator import galaxy_s3_tool
+from meta import galaxy_op
 
-OPERATIONS = {}
-
-def register_operation(func):
-    OPERATIONS[func.__name__] = galaxy_s3_tool(func)
-    return func
-
-@register_operation
+@galaxy_op(description="Multiplies the dataset by a given factor")
 def multiply(ds: xr.Dataset, factor: float = 2.0) -> xr.Dataset:
     return ds * factor
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2 or sys.argv[1] not in OPERATIONS:
-        print(f"Použití: python operations.py <nazev_operace> [argumenty]")
-        print(f"Dostupné operace: {list(OPERATIONS.keys())}")
-        sys.exit(1)
+@galaxy_op(description="Computes the difference between two datasets")
+def subtract(ds1: xr.Dataset, ds2: xr.Dataset) -> xr.Dataset:
+    return ds1 - ds2
 
-    operation_name = sys.argv.pop(1)
-    OPERATIONS[operation_name]()
+@galaxy_op(description="Concatenates multiple datasets into one")
+def concatenate(datasets: List[xr.Dataset], dim: str = "time") -> xr.Dataset:
+    return xr.concat(datasets, dim=dim)

@@ -1,5 +1,6 @@
 *.zarr
 .venv
+*.xml
+__pycache__
 kuba-cluster.yaml
-vendor
-initial_dataset.json
+dataset.json
