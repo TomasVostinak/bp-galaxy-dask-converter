@@ -37,7 +37,7 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       
-        initContainers:
+      initContainers:
         - name: fix-cookie-permissions
           image: rabbitmq:3.13-management
           securityContext:
