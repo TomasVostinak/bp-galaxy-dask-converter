@@ -1,4 +1,5 @@
 import inspect
+import os
 from typing import get_origin, List
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
@@ -7,6 +8,9 @@ from pathlib import Path
 
 import operations
 from meta import REGISTERED_OPERATIONS
+
+OUTPUT_TOOLS_DIR = "mytools"
+LOCAL_TOOL_CONF = "local_tool_conf.xml"
 
 def map_type_to_galaxy(param_name, param):
     annotation = param.annotation
@@ -25,8 +29,6 @@ def map_type_to_galaxy(param_name, param):
         attrs.update({"type": "integer", "value": str(default or 0)})
     elif annotation == bool:
         attrs.update({"type": "boolean", "checked": "true" if default else "false"})
-    elif annotation == str:
-        attrs.update({"type": "text", "value": str(default or "")})
     else:
         attrs.update({"type": "text", "value": str(default or "")})
 
@@ -86,6 +88,19 @@ def generate_tool_xml(op_info):
 
     return parsed.toprettyxml(indent="    ")
 
+def generate_local_tool_conf(registered_ops):
+    toolbox = ET.Element("toolbox", monitor="true")
+    section = ET.SubElement(
+        toolbox, "section", id="custom_s3_tools", name="S3 Dask Tools"
+    )
+
+    for op_name in registered_ops.keys():
+        tool_file_path = f"mytools/tool_{op_name}.xml"
+        ET.SubElement(section, "tool", file=tool_file_path)
+
+    raw_xml = ET.tostring(toolbox, encoding="utf-8")
+    return minidom.parseString(raw_xml).toprettyxml(indent="    ")
+
 def main():
     output_dir = Path("mytools")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -96,6 +111,11 @@ def main():
         file_path = output_dir / f"tool_{name}.xml"
         file_path.write_text(xml_content, encoding="utf-8")
         print(f" -> Generated file: {file_path}")
+
+    conf_content = generate_local_tool_conf(REGISTERED_OPERATIONS)
+    with open(LOCAL_TOOL_CONF, "w", encoding="utf-8") as f:
+        f.write(conf_content)
+    print(f" -> Generated tool configuration file: {LOCAL_TOOL_CONF}")
 
 if __name__ == "__main__":
     main()
