@@ -38,7 +38,7 @@ jobs:
       - run: pip install --quiet pyyaml xarray s3fs
 
       - name: Generate Tool XMLs and local_tool_conf.xml
-        run: python xml_generator.py
+        run: python mytools/xml_generator.py
 
       - name: Kubeconfig from secret
         run: |
