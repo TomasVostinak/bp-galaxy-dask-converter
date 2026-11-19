@@ -71,7 +71,7 @@ def generate_tool_xml(op_info):
 
     # subtag <command>
     command_elem = ET.SubElement(tool, "command", detect_errors="exit_code")
-    cmd_text = "\n" + " \\\n    ".join(cmd_lines) + "\n"
+    cmd_text = "\n" + " ".join(cmd_lines) + "\n"
 
     # subtag <help>
     help_elem = ET.SubElement(tool, "help")
